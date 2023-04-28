@@ -1,93 +1,103 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import AdminNavBar from "./AdminNavBar";
+import QuestionForm from "./QuestionForm";
+import QuestionList from "./QuestionList";
 
-function QuestionForm(props) {
-  const [formData, setFormData] = useState({
-    prompt: "",
-    answer1: "",
-    answer2: "",
-    answer3: "",
-    answer4: "",
-    correctIndex: 0,
-  });
+function App() {
+  const [page, setPage] = useState("List");
+  
+  const[data, setData] = useState([
+      {
+        "id": 1,
+        "prompt": "What special prop should always be included for lists of elements?",
+        "answers": [
+          "id",
+          "name",
+          "key",
+          "prop"
+        ],
+        "correctIndex": 2
+      }
+  ]);
 
-  function handleChange(event) {
-    setFormData({
-      ...formData,
-      [event.target.name]: event.target.value,
-    });
+  useEffect(() => {
+    console.log('At useeffect')
+    fetch("http://localhost:4000/questions")
+      .then(response => response.json())
+     //.then(data => console.log('This is data' +data))
+     .then(resData =>setData(resData))
+  }, []);
+
+  //console.log(data);
+
+  //POST Request
+  function addQuestion(newQuestion){
+    const config = {
+      method: "POST",
+      headers: {
+        "Content-type":  "application/json",
+      },
+      body: JSON.stringify(newQuestion)
+    }
+
+    fetch("http://localhost:4000/questions",config)
+      .then(response => response.json())
+      .then(newQuestion =>{
+        const newQuestions =[...data, newQuestion];
+        setData(newQuestions);
+      })
+  }
+  //End POST request
+
+
+  //DELETE request
+
+  function deleteQuestion(questId){
+    const config = {
+      method: "DELETE"
+    };
+    fetch(`http://localhost:4000/questions/${questId}`, config)
+    .then(response => response.json())
+    .then(()=>{
+        const newList = data.filter(filData=>filData.id!==questId);
+        setData(newList);
+    })
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    console.log(formData);
+  //End DELETE request
+
+  //UPDATE request
+
+  function updateQuestion(questId, updQuestion){
+    console.log('UPDATE '+ updQuestion + ' ' + questId)
+   
+
+    fetch(`http://localhost:4000/questions/${questId}`,  {
+          method: "PATCH",
+          headers: {
+            "Content-type":  "application/json",
+          },
+          body: {"correctIndex":updQuestion},
+    })
+      .then(response => response.json())
+      .then((updQuestion) =>{
+          const updQuestions = data.map((dat)=>{
+          
+                if(dat.id === questId) return updQuestion;
+                return data;
+          })
+        
+          setData(updQuestions);
+      })
   }
+
 
   return (
-    <section>
-      <h1>New Question</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          Prompt:
-          <input
-            type="text"
-            name="prompt"
-            value={formData.prompt}
-            onChange={handleChange}
-          />
-        </label>
-        <label>
-          Answer 1:
-          <input
-            type="text"
-            name="answer1"
-            value={formData.answer1}
-            onChange={handleChange}
-          />
-        </label>
-        <label>
-          Answer 2:
-          <input
-            type="text"
-            name="answer2"
-            value={formData.answer2}
-            onChange={handleChange}
-          />
-        </label>
-        <label>
-          Answer 3:
-          <input
-            type="text"
-            name="answer3"
-            value={formData.answer3}
-            onChange={handleChange}
-          />
-        </label>
-        <label>
-          Answer 4:
-          <input
-            type="text"
-            name="answer4"
-            value={formData.answer4}
-            onChange={handleChange}
-          />
-        </label>
-        <label>
-          Correct Answer:
-          <select
-            name="correctIndex"
-            value={formData.correctIndex}
-            onChange={handleChange}
-          >
-            <option value="0">{formData.answer1}</option>
-            <option value="1">{formData.answer2}</option>
-            <option value="2">{formData.answer3}</option>
-            <option value="3">{formData.answer4}</option>
-          </select>
-        </label>
-        <button type="submit">Add Question</button>
-      </form>
-    </section>
+    <main>
+      <AdminNavBar onChangePage={setPage} />
+      {page === "Form" ? <QuestionForm addQuestion={addQuestion}/> : <QuestionList mydata={data} delQuestion={deleteQuestion} updatedQuestion={updateQuestion}/>}
+    </main>
   );
 }
 
-export default QuestionForm;
+export default App;
